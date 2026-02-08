@@ -1,8 +1,10 @@
 import { TransactionTable } from '@/components/transactions/TransactionTable';
 import { ManualEntryDialog } from '@/components/transactions/ManualEntryDialog';
-import { mockTransactions } from '@/data/mockData';
+import { useTransactions } from '@/hooks/useMpesa';
 
 export default function B2CTransactions() {
+  const { data: transactions, isLoading } = useTransactions('B2C');
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -16,7 +18,8 @@ export default function B2CTransactions() {
       </div>
 
       <TransactionTable
-        transactions={mockTransactions}
+        transactions={transactions}
+        isLoading={isLoading}
         title="All B2C Transactions"
         type="B2C"
       />

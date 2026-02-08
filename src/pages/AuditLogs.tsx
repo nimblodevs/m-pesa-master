@@ -1,9 +1,10 @@
 import { format } from 'date-fns';
-import { Download, Filter, Shield, Database, Settings, RefreshCw } from 'lucide-react';
+import { Download, Shield, Database, Settings, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
@@ -12,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { mockAuditLogs } from '@/data/mockData';
+import { useAuditLogs } from '@/hooks/useMpesa';
 import { cn } from '@/lib/utils';
 
 const categoryIcons = {
@@ -30,6 +31,8 @@ const categoryColors = {
 };
 
 export default function AuditLogs() {
+  const { data: logs, isLoading } = useAuditLogs();
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -54,31 +57,19 @@ export default function AuditLogs() {
               <Badge variant="outline" className="cursor-pointer hover:bg-muted">
                 All
               </Badge>
-              <Badge
-                variant="outline"
-                className="cursor-pointer hover:bg-muted gap-1"
-              >
+              <Badge variant="outline" className="cursor-pointer hover:bg-muted gap-1">
                 <Database className="w-3 h-3" />
                 Transaction
               </Badge>
-              <Badge
-                variant="outline"
-                className="cursor-pointer hover:bg-muted gap-1"
-              >
+              <Badge variant="outline" className="cursor-pointer hover:bg-muted gap-1">
                 <Shield className="w-3 h-3" />
                 Security
               </Badge>
-              <Badge
-                variant="outline"
-                className="cursor-pointer hover:bg-muted gap-1"
-              >
+              <Badge variant="outline" className="cursor-pointer hover:bg-muted gap-1">
                 <Settings className="w-3 h-3" />
                 Configuration
               </Badge>
-              <Badge
-                variant="outline"
-                className="cursor-pointer hover:bg-muted gap-1"
-              >
+              <Badge variant="outline" className="cursor-pointer hover:bg-muted gap-1">
                 <RefreshCw className="w-3 h-3" />
                 Reconciliation
               </Badge>
@@ -93,49 +84,61 @@ export default function AuditLogs() {
           <CardTitle className="text-lg font-semibold">Recent Activity</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Timestamp</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Action</TableHead>
-                <TableHead>User</TableHead>
-                <TableHead>IP Address</TableHead>
-                <TableHead className="max-w-md">Details</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {mockAuditLogs.map((log) => {
-                const IconComponent = categoryIcons[log.category];
-                return (
-                  <TableRow key={log.id} className="table-row-hover">
-                    <TableCell className="font-mono text-sm">
-                      {format(log.timestamp, 'MMM dd, yyyy HH:mm:ss')}
-                    </TableCell>
-                    <TableCell>
-                      <div
-                        className={cn(
-                          'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium',
-                          categoryColors[log.category]
-                        )}
-                      >
-                        <IconComponent className="w-3 h-3" />
-                        {log.category}
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-medium">{log.action}</TableCell>
-                    <TableCell>{log.userName}</TableCell>
-                    <TableCell className="font-mono text-sm">
-                      {log.ipAddress}
-                    </TableCell>
-                    <TableCell className="max-w-md truncate text-sm text-muted-foreground">
-                      {log.details}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+          {isLoading ? (
+            <div className="space-y-4">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : !logs?.length ? (
+            <p className="text-center text-muted-foreground py-8">
+              No audit logs recorded yet.
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Timestamp</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Action</TableHead>
+                  <TableHead>User</TableHead>
+                  <TableHead>IP Address</TableHead>
+                  <TableHead className="max-w-md">Details</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {logs.map((log) => {
+                  const IconComponent = categoryIcons[log.category];
+                  return (
+                    <TableRow key={log.id} className="table-row-hover">
+                      <TableCell className="font-mono text-sm">
+                        {format(new Date(log.timestamp), 'MMM dd, yyyy HH:mm:ss')}
+                      </TableCell>
+                      <TableCell>
+                        <div
+                          className={cn(
+                            'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium',
+                            categoryColors[log.category]
+                          )}
+                        >
+                          <IconComponent className="w-3 h-3" />
+                          {log.category}
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium">{log.action}</TableCell>
+                      <TableCell>{log.user_name || 'System'}</TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {log.ip_address || 'N/A'}
+                      </TableCell>
+                      <TableCell className="max-w-md truncate text-sm text-muted-foreground">
+                        {log.details || '-'}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>
