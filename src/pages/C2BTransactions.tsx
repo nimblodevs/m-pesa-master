@@ -1,8 +1,10 @@
 import { TransactionTable } from '@/components/transactions/TransactionTable';
 import { ManualEntryDialog } from '@/components/transactions/ManualEntryDialog';
-import { mockTransactions } from '@/data/mockData';
+import { useTransactions } from '@/hooks/useMpesa';
 
 export default function C2BTransactions() {
+  const { data: transactions, isLoading } = useTransactions('C2B');
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -16,7 +18,8 @@ export default function C2BTransactions() {
       </div>
 
       <TransactionTable
-        transactions={mockTransactions}
+        transactions={transactions}
+        isLoading={isLoading}
         title="All C2B Transactions"
         type="C2B"
       />

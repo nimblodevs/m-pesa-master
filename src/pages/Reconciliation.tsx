@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { RefreshCw, Download, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { RefreshCw, Download, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,10 +12,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { mockReconciliations } from '@/data/mockData';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useReconciliations, useRunReconciliation } from '@/hooks/useMpesa';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 export default function Reconciliation() {
+  const { data: reconciliations, isLoading } = useReconciliations();
+  const runReconciliation = useRunReconciliation();
+
   const formatAmount = (amount: number) => {
     return new Intl.NumberFormat('en-KE', {
       style: 'currency',
@@ -23,12 +28,23 @@ export default function Reconciliation() {
     }).format(amount);
   };
 
-  const totalReconciled = mockReconciliations.filter(
-    (r) => r.status === 'reconciled'
-  ).length;
-  const totalDiscrepancies = mockReconciliations.filter(
-    (r) => r.status === 'discrepancy'
-  ).length;
+  const handleRunReconciliation = async () => {
+    try {
+      await runReconciliation.mutateAsync(undefined);
+      toast.success('Reconciliation completed successfully');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to run reconciliation');
+    }
+  };
+
+  const totalReconciled = reconciliations?.filter(r => r.status === 'reconciled').length || 0;
+  const totalDiscrepancies = reconciliations?.filter(r => r.status === 'discrepancy').length || 0;
+  const totalDiscrepancyAmount = reconciliations?.reduce((sum, r) => sum + Number(r.discrepancy_amount), 0) || 0;
+
+  const overallMatchRate = reconciliations?.length 
+    ? (reconciliations.reduce((sum, r) => sum + r.matched_transactions, 0) / 
+       reconciliations.reduce((sum, r) => sum + r.total_transactions, 0)) * 100 
+    : 0;
 
   return (
     <div className="space-y-6">
@@ -44,8 +60,16 @@ export default function Reconciliation() {
             <Download className="w-4 h-4 mr-2" />
             Export Report
           </Button>
-          <Button className="gradient-mpesa shadow-mpesa">
-            <RefreshCw className="w-4 h-4 mr-2" />
+          <Button 
+            className="gradient-mpesa shadow-mpesa"
+            onClick={handleRunReconciliation}
+            disabled={runReconciliation.isPending}
+          >
+            {runReconciliation.isPending ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <RefreshCw className="w-4 h-4 mr-2" />
+            )}
             Run Reconciliation
           </Button>
         </div>
@@ -81,30 +105,13 @@ export default function Reconciliation() {
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold">
-              {formatAmount(
-                mockReconciliations.reduce((sum, r) => sum + r.discrepancyAmount, 0)
-              )}
-            </div>
+            <div className="text-2xl font-bold">{formatAmount(totalDiscrepancyAmount)}</div>
             <p className="text-sm text-muted-foreground">Total Discrepancy Amount</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold">
-              {(
-                (mockReconciliations.reduce(
-                  (sum, r) => sum + r.matchedTransactions,
-                  0
-                ) /
-                  mockReconciliations.reduce(
-                    (sum, r) => sum + r.totalTransactions,
-                    0
-                  )) *
-                100
-              ).toFixed(1)}
-              %
-            </div>
+            <div className="text-2xl font-bold">{overallMatchRate.toFixed(1)}%</div>
             <p className="text-sm text-muted-foreground">Match Rate</p>
           </CardContent>
         </Card>
@@ -113,70 +120,81 @@ export default function Reconciliation() {
       {/* Reconciliation Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg font-semibold">
-            Reconciliation History
-          </CardTitle>
+          <CardTitle className="text-lg font-semibold">Reconciliation History</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Total Transactions</TableHead>
-                <TableHead>Total Amount</TableHead>
-                <TableHead>Match Progress</TableHead>
-                <TableHead>Unmatched</TableHead>
-                <TableHead>Discrepancy</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {mockReconciliations.map((record) => {
-                const matchRate =
-                  (record.matchedTransactions / record.totalTransactions) * 100;
-                return (
-                  <TableRow key={record.id} className="table-row-hover">
-                    <TableCell className="font-medium">
-                      {format(record.date, 'MMM dd, yyyy')}
-                    </TableCell>
-                    <TableCell>{record.totalTransactions}</TableCell>
-                    <TableCell className="font-semibold">
-                      {formatAmount(record.totalAmount)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-3 w-40">
-                        <Progress value={matchRate} className="h-2" />
-                        <span className="text-sm text-muted-foreground">
-                          {matchRate.toFixed(0)}%
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>{record.unmatchedTransactions}</TableCell>
-                    <TableCell
-                      className={cn(
-                        'font-medium',
-                        record.discrepancyAmount > 0 && 'text-destructive'
-                      )}
-                    >
-                      {formatAmount(record.discrepancyAmount)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
+          {isLoading ? (
+            <div className="space-y-4">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : !reconciliations?.length ? (
+            <p className="text-center text-muted-foreground py-8">
+              No reconciliation records yet. Run reconciliation to get started.
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Total Transactions</TableHead>
+                  <TableHead>Total Amount</TableHead>
+                  <TableHead>Match Progress</TableHead>
+                  <TableHead>Unmatched</TableHead>
+                  <TableHead>Discrepancy</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {reconciliations.map((record) => {
+                  const matchRate = record.total_transactions > 0 
+                    ? (record.matched_transactions / record.total_transactions) * 100 
+                    : 0;
+                  return (
+                    <TableRow key={record.id} className="table-row-hover">
+                      <TableCell className="font-medium">
+                        {format(new Date(record.reconciliation_date), 'MMM dd, yyyy')}
+                      </TableCell>
+                      <TableCell>{record.total_transactions}</TableCell>
+                      <TableCell className="font-semibold">
+                        {formatAmount(Number(record.total_amount))}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-3 w-40">
+                          <Progress value={matchRate} className="h-2" />
+                          <span className="text-sm text-muted-foreground">
+                            {matchRate.toFixed(0)}%
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{record.unmatched_transactions}</TableCell>
+                      <TableCell
                         className={cn(
-                          record.status === 'reconciled' && 'status-success',
-                          record.status === 'pending' && 'status-pending',
-                          record.status === 'discrepancy' && 'status-failed'
+                          'font-medium',
+                          Number(record.discrepancy_amount) > 0 && 'text-destructive'
                         )}
                       >
-                        {record.status}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                        {formatAmount(Number(record.discrepancy_amount))}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            record.status === 'reconciled' && 'status-success',
+                            record.status === 'pending' && 'status-pending',
+                            record.status === 'discrepancy' && 'status-failed'
+                          )}
+                        >
+                          {record.status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -25,24 +25,26 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Transaction, TransactionType } from '@/types/mpesa';
 import { cn } from '@/lib/utils';
 
 interface TransactionTableProps {
-  transactions: Transaction[];
+  transactions: Transaction[] | undefined;
+  isLoading?: boolean;
   title: string;
   type?: TransactionType;
 }
 
-export function TransactionTable({ transactions, title, type }: TransactionTableProps) {
+export function TransactionTable({ transactions, isLoading, title, type }: TransactionTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
 
-  const filteredTransactions = transactions.filter(
+  const filteredTransactions = (transactions || []).filter(
     (t) =>
       (!type || t.type === type) &&
-      (t.transactionId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        t.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        t.phoneNumber.includes(searchTerm))
+      (t.transaction_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.phone_number.includes(searchTerm))
   );
 
   const formatAmount = (amount: number) => {
@@ -51,6 +53,23 @@ export function TransactionTable({ transactions, title, type }: TransactionTable
       currency: 'KES',
     }).format(amount);
   };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold">{title}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -78,79 +97,85 @@ export function TransactionTable({ transactions, title, type }: TransactionTable
         </div>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Transaction ID</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Reference</TableHead>
-              <TableHead>Date & Time</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="w-12"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredTransactions.map((transaction) => (
-              <TableRow key={transaction.id} className="table-row-hover">
-                <TableCell className="font-mono text-sm">
-                  {transaction.transactionId}
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="font-medium">
-                    {transaction.type}
-                  </Badge>
-                </TableCell>
-                <TableCell>{transaction.customerName || '-'}</TableCell>
-                <TableCell className="font-mono text-sm">
-                  {transaction.phoneNumber}
-                </TableCell>
-                <TableCell className="font-semibold">
-                  {formatAmount(transaction.amount)}
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {transaction.accountReference}
-                </TableCell>
-                <TableCell className="text-sm">
-                  {format(transaction.timestamp, 'MMM dd, yyyy HH:mm')}
-                </TableCell>
-                <TableCell>
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      transaction.status === 'completed' && 'status-success',
-                      transaction.status === 'pending' && 'status-pending',
-                      transaction.status === 'failed' && 'status-failed'
-                    )}
-                  >
-                    {transaction.status}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem>
-                        <Eye className="w-4 h-4 mr-2" />
-                        View Details
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        Query Status
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
+        {filteredTransactions.length === 0 ? (
+          <p className="text-center text-muted-foreground py-8">
+            No transactions found.
+          </p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Transaction ID</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Customer</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead>Reference</TableHead>
+                <TableHead>Date & Time</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="w-12"></TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {filteredTransactions.map((transaction) => (
+                <TableRow key={transaction.id} className="table-row-hover">
+                  <TableCell className="font-mono text-sm">
+                    {transaction.transaction_id}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="font-medium">
+                      {transaction.type}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{transaction.customer_name || '-'}</TableCell>
+                  <TableCell className="font-mono text-sm">
+                    {transaction.phone_number}
+                  </TableCell>
+                  <TableCell className="font-semibold">
+                    {formatAmount(Number(transaction.amount))}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {transaction.account_reference}
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {format(new Date(transaction.created_at), 'MMM dd, yyyy HH:mm')}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        transaction.status === 'completed' && 'status-success',
+                        transaction.status === 'pending' && 'status-pending',
+                        transaction.status === 'failed' && 'status-failed'
+                      )}
+                    >
+                      {transaction.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreHorizontal className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem>
+                          <Eye className="w-4 h-4 mr-2" />
+                          View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>
+                          <RefreshCw className="w-4 h-4 mr-2" />
+                          Query Status
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </CardContent>
     </Card>
   );
