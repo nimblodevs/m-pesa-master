@@ -11,6 +11,7 @@ import { TransactionChart } from '@/components/dashboard/TransactionChart';
 import { RecentTransactions } from '@/components/dashboard/RecentTransactions';
 import { useDashboardStats } from '@/hooks/useMpesa';
 import { STKPushDialog } from '@/components/dashboard/STKPushDialog';
+import { B2CDisbursementDialog } from '@/components/dashboard/B2CDisbursementDialog';
 
 export default function Dashboard() {
   const { data: stats, isLoading } = useDashboardStats();
@@ -45,7 +46,10 @@ export default function Dashboard() {
             Overview of your M-Pesa integration performance
           </p>
         </div>
-        <STKPushDialog />
+        <div className="flex gap-2">
+          <STKPushDialog />
+          <B2CDisbursementDialog />
+        </div>
       </div>
 
       {/* Stats Grid */}
