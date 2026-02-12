@@ -10,6 +10,7 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { TransactionChart } from '@/components/dashboard/TransactionChart';
 import { RecentTransactions } from '@/components/dashboard/RecentTransactions';
 import { useDashboardStats } from '@/hooks/useMpesa';
+import { STKPushDialog } from '@/components/dashboard/STKPushDialog';
 
 export default function Dashboard() {
   const { data: stats, isLoading } = useDashboardStats();
@@ -37,11 +38,14 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Overview of your M-Pesa integration performance
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground">
+            Overview of your M-Pesa integration performance
+          </p>
+        </div>
+        <STKPushDialog />
       </div>
 
       {/* Stats Grid */}
