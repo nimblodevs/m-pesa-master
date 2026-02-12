@@ -12,6 +12,7 @@ import { RecentTransactions } from '@/components/dashboard/RecentTransactions';
 import { useDashboardStats } from '@/hooks/useMpesa';
 import { STKPushDialog } from '@/components/dashboard/STKPushDialog';
 import { B2CDisbursementDialog } from '@/components/dashboard/B2CDisbursementDialog';
+import { TransactionStatusDialog } from '@/components/dashboard/TransactionStatusDialog';
 
 export default function Dashboard() {
   const { data: stats, isLoading } = useDashboardStats();
@@ -49,6 +50,7 @@ export default function Dashboard() {
         <div className="flex gap-2">
           <STKPushDialog />
           <B2CDisbursementDialog />
+          <TransactionStatusDialog />
         </div>
       </div>
 
